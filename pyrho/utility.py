@@ -1,10 +1,6 @@
 """
 Numerical tools used throughout pyrho.
 
-Classes:
-    InterruptablePool: A wrapper for multiprocessing.Pool that handles
-        keyborad interrupts more gracefully.
-
 Functions:
     get_table_idx: Returns the lookup table index of a configuration.
     log_mult_coef: Computes the log of a multinomial coefficient.
@@ -12,34 +8,10 @@ Functions:
 """
 from __future__ import division
 import logging
-import signal
-from multiprocessing.pool import Pool
 
 import numpy as np
 from pandas import DataFrame
 from numba import njit
-
-
-def _pool_initializer():
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-
-class InterruptablePool(Pool):
-    """
-    A wrapper for multiprocessing.Pool that handles keyboard interrupts.
-    """
-
-    def __init__(self, *args, **kwargs):
-        kwargs['initializer'] = _pool_initializer
-        super(InterruptablePool, self).__init__(*args, **kwargs)
-
-    def map(self, func, iterable):
-        try:
-            return super(InterruptablePool, self).map(func, iterable)
-        except KeyboardInterrupt:
-            self.terminate()
-            self.join()
-            raise KeyboardInterrupt
 
 
 @njit('int64(int64, int64, int64, int64, int64)', cache=True)

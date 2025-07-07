@@ -20,12 +20,13 @@ except ImportError:
 import numpy as np
 from pandas import read_hdf
 from scipy.optimize import minimize_scalar
+from concurrent.futures import ProcessPoolExecutor
 
 from pyrho.haplotype_reader import (genos_to_configs, parse_vcf_to_genos,
                                     parse_seqs_to_genos)
 from pyrho.rho_splines import compute_splines
 from pyrho.objective_function import RhomapObjective
-from pyrho.utility import _single_vec_downsample, downsample, InterruptablePool as Pool
+from pyrho.utility import _single_vec_downsample, downsample
 
 
 # the following algorithms implement Liu et al. 2010
@@ -374,7 +375,7 @@ def _main(args):
     full_table = np.concatenate(table_list[::-1])
     pool = None
     if args.numthreads > 1:
-        pool = Pool(args.numthreads, maxtasksperchild=5)
+        pool = ProcessPoolExecutor(args.numthreads, max_tasks_per_child=5)
     logging.info('Beginning optimization.')
     start_time = time.time()
     result = optimize(genos, args.ploidy, positions, full_table,

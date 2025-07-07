@@ -26,7 +26,8 @@ from scipy.stats import spearmanr, pearsonr
 from pandas import read_hdf
 from numba import njit
 
-from pyrho.utility import InterruptablePool as Pool
+from concurrent.futures import ProcessPoolExecutor
+
 from pyrho.optimizer import optimize
 from pyrho.size_reader import read_msmc, read_smcpp, decimate_sizes
 
@@ -97,8 +98,8 @@ def _score(estimates, positions, labels, pool):
 
     estimates_1bp = np.hstack(new_estimates)
     labels_1bp = np.hstack(new_labels) / 40000.
-    corr_1bp = pool.apply_async(_compute_correlations,
-                                (estimates_1bp, labels_1bp))
+    corr_1bp = pool.submit(_compute_correlations,
+                                estimates_1bp, labels_1bp)
     estimates_10kb = pool.map(_window_average,
                               zip(new_estimates, repeat(10000)))
     labels_10kb = pool.map(_window_average,
@@ -116,7 +117,7 @@ def _score(estimates, positions, labels, pool):
     log_l2_norm = np.sqrt(((np.log(estimates_1bp)
                             - np.log(labels_1bp))**2).sum())
 
-    to_return = (corr_1bp.get()
+    to_return = (corr_1bp.result()
                  + _compute_correlations(estimates_10kb, labels_10kb)
                  + _compute_correlations(estimates_100kb, labels_100kb)
                  + [l2_norm, log_l2_norm])
@@ -244,16 +245,16 @@ def _main(args):
                                                    initial_size=pop_size,
                                                    population_id=0))
     reco_maps = _load_hapmap()
-    pool = Pool(args.numthreads, maxtasksperchild=100)
+    pool = ProcessPoolExecutor(args.numthreads, max_tasks_per_child=100)
     logging.info('Simulating data...')
     simulation_args = [((pop_config, args.mu, demography, args.ploidy),
                         reco_maps) for k in range(args.num_sims)]
-    test_set = list(pool.imap(_simulate_data, simulation_args, chunksize=10))
+    test_set = list(pool.map(_simulate_data, simulation_args, chunksize=10))
     logging.info('\tdone simulating')
     scores = {}
     for block_penalty in block_penalties:
         for window_size in window_sizes:
-            estimates = list(pool.imap(partial(_call_optimize,
+            estimates = list(pool.map(partial(_call_optimize,
                                                metawindow=args.metawindow,
                                                windowsize=window_size,
                                                table=table.values,
