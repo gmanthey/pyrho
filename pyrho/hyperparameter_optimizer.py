@@ -100,14 +100,14 @@ def _score(estimates, positions, labels, pool):
     labels_1bp = np.hstack(new_labels) / 40000.
     corr_1bp = pool.submit(_compute_correlations,
                                 estimates_1bp, labels_1bp)
-    estimates_10kb = pool.map(_window_average,
-                              zip(new_estimates, repeat(10000)))
-    labels_10kb = pool.map(_window_average,
-                           zip(new_labels, repeat(10000)))
-    estimates_100kb = pool.map(_window_average,
-                               zip(estimates_10kb, repeat(10)))
-    labels_100kb = pool.map(_window_average,
-                            zip(labels_10kb, repeat(10)))
+    estimates_10kb = list(pool.map(_window_average,
+                              zip(new_estimates, repeat(10000))))
+    labels_10kb = list(pool.map(_window_average,
+                           zip(new_labels, repeat(10000))))
+    estimates_100kb = list(pool.map(_window_average,
+                               zip(estimates_10kb, repeat(10))))
+    labels_100kb = list(pool.map(_window_average,
+                            zip(labels_10kb, repeat(10))))
     estimates_10kb = np.hstack(estimates_10kb)
     labels_10kb = np.hstack(labels_10kb)
     estimates_100kb = np.hstack(estimates_100kb)

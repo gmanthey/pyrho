@@ -256,7 +256,7 @@ def optimize(genos, ploidy, positions, table, rho_list, subtable_sizes,
     if pool is None:
         results = list(map(_window_optimize, optimization_args))
     else:
-        results = pool.map(_window_optimize, optimization_args)
+        results = list(pool.map(_window_optimize, optimization_args))
     final_rhos = _stitch(results, overlap)
     assert len(final_rhos) == len(lens)
     return final_rhos
